@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <!-- スマホ対応用の meta タグ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>□ × □ = ◯ （リセットボタン付き）</title>
+  <style>
+    /* ===== HTML & BODY を 100% 高さにして flex 中央寄せ ===== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    body {
+      display: flex;
+      justify-content: center;   /* 横方向中央 */
+      align-items: center;       /* 縦方向中央 */
+      font-family: sans-serif;
+      background-color: #fafafa;
+    }
+
+    /* ===== 全体を囲むコンテナ ===== */
+    .math-container {
+      display: flex;
+      flex-wrap: wrap;           /* 幅が狭いときに折り返し */
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      background-color: white;
+      padding: 24px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* × と = の記号を大きくして目立たせる */
+    .math-container > span {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    /* セレクトを大きめに */
+    select {
+      font-size: 1.2rem;
+      padding: 8px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      min-width: 140px;
+      color: #555;
+    }
+
+    /* 結果を丸く・大きく */
+    #result {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 60px;
+      height: 60px;
+      border: 3px solid #333;
+      border-radius: 50%;
+      background-color: #f0f0f0;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: transparent; /* 初期は見えない */
+    }
+
+    /* リセットボタンのスタイル */
+    #reset-btn {
+      font-size: 1rem;
+      padding: 8px 16px;
+      border: 2px solid #888;
+      border-radius: 8px;
+      background-color: #fafafa;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #reset-btn:hover {
+      background-color: #eee;
+    }
+
+    /* ===== スマホ表示（幅480px以下）の調整 ===== */
+    @media (max-width: 480px) {
+      .math-container {
+        flex-direction: column;  /* 縦並び */
+        padding: 16px;
+      }
+      .math-container > span {
+        font-size: 1.8rem;
+      }
+      select {
+        width: 100%;
+        min-width: unset;
+      }
+      #result {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+      }
+      #reset-btn {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="math-container">
+    <!-- 左側の □（プレースホルダーあり） -->
+    <select id="select-left">
+      <option value="" disabled selected>— 選択してください —</option>
+    </select>
+
+    <!-- × の記号 -->
+    <span>×</span>
+
+    <!-- 右側の □（プレースホルダーあり） -->
+    <select id="select-right">
+      <option value="" disabled selected>— 選択してください —</option>
+    </select>
+
+    <!-- = の記号 -->
+    <span>=</span>
+
+    <!-- ◯ の部分（初期は空） -->
+    <span id="result"></span>
+
+    <!-- ここにリセットボタン -->
+    <button id="reset-btn">リセット</button>
+  </div>
+
+  <script>
+    // 1) 13個のワードを配列で用意（ユーザー指定ラベル）
+    const words = [
+      "年齢",
+      "連絡頻度",
+      "社交性",
+      "趣味",
+      "パートナーの優先度",
+      "一人の時間",
+      "過去の恋愛経験",
+      "金銭感覚",
+      "食の好み",
+      "服の好み",
+      "生活習慣",
+      "居住地",
+      "学歴"
+    ];
+
+    // 2) CSVファイルに従って、組み合わせごとの数値マッピング
+    const values = {
+      "年齢": {
+        "年齢": 13,
+        "連絡頻度": 6,
+        "社交性": 6,
+        "趣味": 6,
+        "パートナーの優先度": 7,
+        "一人の時間": 4,
+        "過去の恋愛経験": 5,
+        "金銭感覚": 3,
+        "食の好み": 5,
+        "服の好み": 6,
+        "生活習慣": 6,
+        "居住地": 3,
+        "学歴": 3
+      },
+      "連絡頻度": {
+        "年齢": 6,
+        "連絡頻度": 13,
+        "社交性": 4,
+        "趣味": 5,
+        "パートナーの優先度": 7,
+        "一人の時間": 6,
+        "過去の恋愛経験": 8,
+        "金銭感覚": 6,
+        "食の好み": 4,
+        "服の好み": 8,
+        "生活習慣": 7,
+        "居住地": 3,
+        "学歴": 6
+      },
+      "社交性": {
+        "年齢": 6,
+        "連絡頻度": 4,
+        "社交性": 13,
+        "趣味": 5,
+        "パートナーの優先度": 2,
+        "一人の時間": 2,
+        "過去の恋愛経験": 2,
+        "金銭感覚": 3,
+        "食の好み": 2,
+        "服の好み": 4,
+        "生活習慣": 2,
+        "居住地": 4,
+        "学歴": 4
+      },
+      "趣味": {
+        "年齢": 6,
+        "連絡頻度": 5,
+        "社交性": 5,
+        "趣味": 13,
+        "パートナーの優先度": 8,
+        "一人の時間": 6,
+        "過去の恋愛経験": 7,
+        "金銭感覚": 5,
+        "食の好み": 8,
+        "服の好み": 7,
+        "生活習慣": 6,
+        "居住地": 3,
+        "学歴": 6
+      },
+      "パートナーの優先度": {
+        "年齢": 7,
+        "連絡頻度": 7,
+        "社交性": 2,
+        "趣味": 8,
+        "パートナーの優先度": 13,
+        "一人の時間": 8,
+        "過去の恋愛経験": 9,
+        "金銭感覚": 6,
+        "食の好み": 7,
+        "服の好み": 8,
+        "生活習慣": 10,
+        "居住地": 5,
+        "学歴": 5
+      },
+      "一人の時間": {
+        "年齢": 4,
+        "連絡頻度": 6,
+        "社交性": 2,
+        "趣味": 6,
+        "パートナーの優先度": 8,
+        "一人の時間": 13,
+        "過去の恋愛経験": 7,
+        "金銭感覚": 9,
+        "食の好み": 6,
+        "服の好み": 8,
+        "生活習慣": 7,
+        "居住地": 4,
+        "学歴": 6
+      },
+      "過去の恋愛経験": {
+        "年齢": 5,
+        "連絡頻度": 8,
+        "社交性": 2,
+        "趣味": 7,
+        "パートナーの優先度": 9,
+        "一人の時間": 7,
+        "過去の恋愛経験": 13,
+        "金銭感覚": 7,
+        "食の好み": 8,
+        "服の好み": 8,
+        "生活習慣": 7,
+        "居住地": 5,
+        "学歴": 6
+      },
+      "金銭感覚": {
+        "年齢": 3,
+        "連絡頻度": 6,
+        "社交性": 3,
+        "趣味": 5,
+        "パートナーの優先度": 6,
+        "一人の時間": 9,
+        "過去の恋愛経験": 7,
+        "金銭感覚": 13,
+        "食の好み": 7,
+        "服の好み": 6,
+        "生活習慣": 7,
+        "居住地": 3,
+        "学歴": 7
+      },
+      "食の好み": {
+        "年齢": 5,
+        "連絡頻度": 4,
+        "社交性": 2,
+        "趣味": 8,
+        "パートナーの優先度": 7,
+        "一人の時間": 6,
+        "過去の恋愛経験": 8,
+        "金銭感覚": 7,
+        "食の好み": 13,
+        "服の好み": 9,
+        "生活習慣": 9,
+        "居住地": 2,
+        "学歴": 7
+      },
+      "服の好み": {
+        "年齢": 6,
+        "連絡頻度": 8,
+        "社交性": 4,
+        "趣味": 7,
+        "パートナーの優先度": 8,
+        "一人の時間": 8,
+        "過去の恋愛経験": 8,
+        "金銭感覚": 6,
+        "食の好み": 9,
+        "服の好み": 13,
+        "生活習慣": 9,
+        "居住地": 1,
+        "学歴": 7
+      },
+      "生活習慣": {
+        "年齢": 6,
+        "連絡頻度": 7,
+        "社交性": 2,
+        "趣味": 6,
+        "パートナーの優先度": 10,
+        "一人の時間": 7,
+        "過去の恋愛経験": 7,
+        "金銭感覚": 7,
+        "食の好み": 9,
+        "服の好み": 9,
+        "生活習慣": 13,
+        "居住地": 1,
+        "学歴": 7
+      },
+      "居住地": {
+        "年齢": 3,
+        "連絡頻度": 3,
+        "社交性": 4,
+        "趣味": 3,
+        "パートナーの優先度": 5,
+        "一人の時間": 4,
+        "過去の恋愛経験": 5,
+        "金銭感覚": 3,
+        "食の好み": 2,
+        "服の好み": 1,
+        "生活習慣": 1,
+        "居住地": 13,
+        "学歴": 5
+      },
+      "学歴": {
+        "年齢": 3,
+        "連絡頻度": 6,
+        "社交性": 4,
+        "趣味": 6,
+        "パートナーの優先度": 5,
+        "一人の時間": 6,
+        "過去の恋愛経験": 6,
+        "金銭感覚": 7,
+        "食の好み": 7,
+        "服の好み": 7,
+        "生活習慣": 7,
+        "居住地": 5,
+        "学歴": 13
+      }
+    };
+
+    // 3) ページ読み込み時に <select> を動的生成
+    window.addEventListener("DOMContentLoaded", () => {
+      const selectLeft = document.getElementById("select-left");
+      const selectRight = document.getElementById("select-right");
+      const resetBtn = document.getElementById("reset-btn");
+
+      // プレースホルダー用<option>のあとに本命の選択肢を追加
+      words.forEach(word => {
+        const opt1 = document.createElement("option");
+        opt1.value = word;
+        opt1.textContent = word;
+        selectLeft.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = word;
+        opt2.textContent = word;
+        selectRight.appendChild(opt2);
+      });
+
+      // 初期はプレースホルダーのままなので、結果は空表示
+      updateResult();
+
+      // 選択が変わったら結果をアップデート
+      selectLeft.addEventListener("change", updateResult);
+      selectRight.addEventListener("change", updateResult);
+
+      // リセットボタン押したら select の値をクリアして結果もクリア
+      resetBtn.addEventListener("click", () => {
+        selectLeft.value = "";
+        selectRight.value = "";
+        updateResult();
+        // プログラムでプレースホルダーに戻すときは、placeholder の option が selected になる
+      });
+    });
+
+    // 4) 選択されたラベルの組み合わせに応じて数値を ◯ に表示
+    function updateResult() {
+      const a = document.getElementById("select-left").value;
+      const b = document.getElementById("select-right").value;
+      const display = document.getElementById("result");
+
+      // どちらかが空文字なら結果は空、文字色も透明に
+      if (!a || !b) {
+        display.textContent = "";
+        display.style.color = "transparent";
+        return;
+      }
+
+      // 両方とも選択済みのときは値を表示して文字色を黒に
+      if (a in values && b in values[a]) {
+        display.textContent = values[a][b];
+        display.style.color = "#000";
+      } else {
+        display.textContent = "－";
+        display.style.color = "#000";
+      }
+    }
+  </script>
+
+</body>
+</html>
