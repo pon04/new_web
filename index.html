@@ -79,6 +79,7 @@
       display: flex;
       gap: 12px;
       justify-content: center;
+      flex-wrap: wrap;
     }
     #history {
       margin-top: 16px;
@@ -142,7 +143,8 @@
       </table>
       <div class="buttons">
         <button onclick="endGame()">試合終了</button>
-        <button onclick="resetAll()">リセット</button>
+        <button onclick="resetScoreboard()">スコアボードリセット</button>
+        <button onclick="resetHistory()">履歴リセット</button>
       </div>
       <div id="history">
         <h4>試合履歴</h4>
@@ -157,7 +159,7 @@
       "金銭感覚", "食の好み", "服の好み", "生活習慣", "居住地", "学歴"
     ];
 
-    const values = { /* --- 中略（最初に送ってくれた values をそのまま使う） --- */ };
+    const values = {};
 
     window.addEventListener("DOMContentLoaded", () => {
       const selectLeft = document.getElementById("select-left");
@@ -233,10 +235,13 @@
       historyList.appendChild(li);
     }
 
-    function resetAll() {
+    function resetScoreboard() {
       inputIds.forEach(id => document.getElementById(id).value = "");
       aTotalEl.textContent = "0";
       bTotalEl.textContent = "0";
+    }
+
+    function resetHistory() {
       historyList.innerHTML = "";
     }
   </script>
