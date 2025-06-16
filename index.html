@@ -1,389 +1,141 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <!-- スマホ対応用メタタグ -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>□ × □ = ◯ （ラベル更新版）</title>
+  <meta charset="UTF-8">
+  <title>スコアボード - A vs B</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
     body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
       font-family: sans-serif;
-      background-color: #fafafa;
+      background-color: #f2f2f2;
+      padding: 20px;
     }
-
-    .math-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
       background-color: white;
-      padding: 24px;
-      border: 2px solid #ddd;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-
-    .math-container > span {
-      font-size: 2rem;
-      font-weight: bold;
-    }
-
-    select {
-      font-size: 1.2rem;
+    th, td {
+      border: 2px solid #333;
       padding: 8px;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      min-width: 140px;
-      color: #555;
+      text-align: center;
     }
-
-    #result {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
+    th {
+      background-color: #ddd;
+    }
+    input[type="number"] {
       width: 60px;
-      height: 60px;
-      border: 3px solid #333;
-      border-radius: 50%;
-      background-color: #f0f0f0;
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: transparent;
-    }
-
-    #reset-btn {
+      text-align: center;
       font-size: 1rem;
-      padding: 8px 16px;
-      border: 2px solid #888;
-      border-radius: 8px;
-      background-color: #fafafa;
-      cursor: pointer;
-      transition: background-color 0.2s;
     }
-    #reset-btn:hover {
+    #history {
+      margin-top: 30px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid #999;
       background-color: #eee;
     }
-
-    @media (max-width: 480px) {
-      .math-container {
-        flex-direction: column;
-        padding: 16px;
-      }
-      .math-container > span {
-        font-size: 1.8rem;
-      }
-      select {
-        width: 100%;
-        min-width: unset;
-      }
-      #result {
-        width: 50px;
-        height: 50px;
-        font-size: 1.2rem;
-      }
-      #reset-btn {
-        width: 100%;
-        box-sizing: border-box;
-      }
+    button:hover {
+      background-color: #ddd;
     }
   </style>
 </head>
 <body>
 
-  <div class="math-container">
-    <!-- 左側の □（プレースホルダーあり） -->
-    <select id="select-left">
-      <option value="" disabled selected>— 選択してください —</option>
-    </select>
+  <h2 style="text-align:center;">スコアボード：A vs B</h2>
 
-    <span>×</span>
+  <table>
+    <thead>
+      <tr>
+        <th>チーム名</th>
+        <th>1回戦</th>
+        <th>2回戦</th>
+        <th>3回戦</th>
+        <th>合計</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>A</td>
+        <td><input type="number" id="a1" min="0" /></td>
+        <td><input type="number" id="a2" min="0" /></td>
+        <td><input type="number" id="a3" min="0" /></td>
+        <td id="a-total">0</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td><input type="number" id="b1" min="0" /></td>
+        <td><input type="number" id="b2" min="0" /></td>
+        <td><input type="number" id="b3" min="0" /></td>
+        <td id="b-total">0</td>
+      </tr>
+    </tbody>
+  </table>
 
-    <!-- 右側の □（プレースホルダーあり） -->
-    <select id="select-right">
-      <option value="" disabled selected>— 選択してください —</option>
-    </select>
+  <div class="buttons">
+    <button onclick="endGame()">試合終了</button>
+    <button onclick="resetAll()">リセット</button>
+  </div>
 
-    <span>=</span>
-
-    <!-- ◯ の部分（初期は空） -->
-    <span id="result"></span>
-
-    <!-- リセットボタン -->
-    <button id="reset-btn">リセット</button>
+  <div id="history">
+    <h3>試合履歴</h3>
+    <ul id="history-list"></ul>
   </div>
 
   <script>
-    // ラベルを新しく並べ替え
-    const words = [
-      "年齢",
-      "連絡頻度",
-      "社交性",
-      "趣味",
-      "優先度",
-      "ひとり時間",
-      "恋愛経験",
-      "金銭感覚",
-      "食の好み",
-      "服の好み",
-      "生活習慣",
-      "居住地",
-      "学歴"
-    ];
+    const inputIds = ["a1", "a2", "a3", "b1", "b2", "b3"];
+    const aTotalEl = document.getElementById("a-total");
+    const bTotalEl = document.getElementById("b-total");
+    const historyList = document.getElementById("history-list");
 
-    // CSVに従った数値マッピング（キーはすべて新ラベルに）
-    const values = {
-      "年齢": {
-        "年齢": 13,
-        "連絡頻度": 6,
-        "社交性": 6,
-        "趣味": 6,
-        "優先度": 7,
-        "ひとり時間": 4,
-        "恋愛経験": 5,
-        "金銭感覚": 3,
-        "食の好み": 5,
-        "服の好み": 6,
-        "生活習慣": 6,
-        "居住地": 3,
-        "学歴": 3
-      },
-      "連絡頻度": {
-        "年齢": 6,
-        "連絡頻度": 13,
-        "社交性": 4,
-        "趣味": 5,
-        "優先度": 7,
-        "ひとり時間": 6,
-        "恋愛経験": 8,
-        "金銭感覚": 6,
-        "食の好み": 4,
-        "服の好み": 8,
-        "生活習慣": 7,
-        "居住地": 3,
-        "学歴": 6
-      },
-      "社交性": {
-        "年齢": 6,
-        "連絡頻度": 4,
-        "社交性": 13,
-        "趣味": 5,
-        "優先度": 2,
-        "ひとり時間": 2,
-        "恋愛経験": 2,
-        "金銭感覚": 3,
-        "食の好み": 2,
-        "服の好み": 4,
-        "生活習慣": 2,
-        "居住地": 4,
-        "学歴": 4
-      },
-      "趣味": {
-        "年齢": 6,
-        "連絡頻度": 5,
-        "社交性": 5,
-        "趣味": 13,
-        "優先度": 8,
-        "ひとり時間": 6,
-        "恋愛経験": 7,
-        "金銭感覚": 5,
-        "食の好み": 8,
-        "服の好み": 7,
-        "生活習慣": 6,
-        "居住地": 3,
-        "学歴": 6
-      },
-      "優先度": {
-        "年齢": 7,
-        "連絡頻度": 7,
-        "社交性": 2,
-        "趣味": 8,
-        "優先度": 13,
-        "ひとり時間": 8,
-        "恋愛経験": 9,
-        "金銭感覚": 6,
-        "食の好み": 7,
-        "服の好み": 8,
-        "生活習慣": 10,
-        "居住地": 5,
-        "学歴": 5
-      },
-      "ひとり時間": {
-        "年齢": 4,
-        "連絡頻度": 6,
-        "社交性": 2,
-        "趣味": 6,
-        "優先度": 8,
-        "ひとり時間": 13,
-        "恋愛経験": 7,
-        "金銭感覚": 9,
-        "食の好み": 6,
-        "服の好み": 8,
-        "生活習慣": 7,
-        "居住地": 4,
-        "学歴": 6
-      },
-      "恋愛経験": {
-        "年齢": 5,
-        "連絡頻度": 8,
-        "社交性": 2,
-        "趣味": 7,
-        "優先度": 9,
-        "ひとり時間": 7,
-        "恋愛経験": 13,
-        "金銭感覚": 7,
-        "食の好み": 8,
-        "服の好み": 8,
-        "生活習慣": 7,
-        "居住地": 5,
-        "学歴": 6
-      },
-      "金銭感覚": {
-        "年齢": 3,
-        "連絡頻度": 6,
-        "社交性": 3,
-        "趣味": 5,
-        "優先度": 6,
-        "ひとり時間": 9,
-        "恋愛経験": 7,
-        "金銭感覚": 13,
-        "食の好み": 7,
-        "服の好み": 6,
-        "生活習慣": 7,
-        "居住地": 3,
-        "学歴": 7
-      },
-      "食の好み": {
-        "年齢": 5,
-        "連絡頻度": 4,
-        "社交性": 2,
-        "趣味": 8,
-        "優先度": 7,
-        "ひとり時間": 6,
-        "恋愛経験": 8,
-        "金銭感覚": 7,
-        "食の好み": 13,
-        "服の好み": 9,
-        "生活習慣": 9,
-        "居住地": 2,
-        "学歴": 7
-      },
-      "服の好み": {
-        "年齢": 6,
-        "連絡頻度": 8,
-        "社交性": 4,
-        "趣味": 7,
-        "優先度": 8,
-        "ひとり時間": 8,
-        "恋愛経験": 8,
-        "金銭感覚": 6,
-        "食の好み": 9,
-        "服の好み": 13,
-        "生活習慣": 9,
-        "居住地": 1,
-        "学歴": 7
-      },
-      "生活習慣": {
-        "年齢": 6,
-        "連絡頻度": 7,
-        "社交性": 2,
-        "趣味": 6,
-        "優先度": 10,
-        "ひとり時間": 7,
-        "恋愛経験": 7,
-        "金銭感覚": 7,
-        "食の好み": 9,
-        "服の好み": 9,
-        "生活習慣": 13,
-        "居住地": 1,
-        "学歴": 7
-      },
-      "居住地": {
-        "年齢": 3,
-        "連絡頻度": 3,
-        "社交性": 4,
-        "趣味": 3,
-        "優先度": 5,
-        "ひとり時間": 4,
-        "恋愛経験": 5,
-        "金銭感覚": 3,
-        "食の好み": 2,
-        "服の好み": 1,
-        "生活習慣": 1,
-        "居住地": 13,
-        "学歴": 5
-      },
-      "学歴": {
-        "年齢": 3,
-        "連絡頻度": 6,
-        "社交性": 4,
-        "趣味": 6,
-        "優先度": 5,
-        "ひとり時間": 6,
-        "恋愛経験": 6,
-        "金銭感覚": 7,
-        "食の好み": 7,
-        "服の好み": 7,
-        "生活習慣": 7,
-        "居住地": 5,
-        "学歴": 13
-      }
-    };
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const selectLeft = document.getElementById("select-left");
-      const selectRight = document.getElementById("select-right");
-      const resetBtn = document.getElementById("reset-btn");
-
-      // プレースホルダー後に選択肢を追加
-      words.forEach(word => {
-        const opt1 = document.createElement("option");
-        opt1.value = word;
-        opt1.textContent = word;
-        selectLeft.appendChild(opt1);
-
-        const opt2 = document.createElement("option");
-        opt2.value = word;
-        opt2.textContent = word;
-        selectRight.appendChild(opt2);
-      });
-
-      updateResult();
-      selectLeft.addEventListener("change", updateResult);
-      selectRight.addEventListener("change", updateResult);
-
-      resetBtn.addEventListener("click", () => {
-        selectLeft.value = "";
-        selectRight.value = "";
-        updateResult();
-      });
+    // 入力の変更に応じて合計計算
+    inputIds.forEach(id => {
+      document.getElementById(id).addEventListener("input", updateTotals);
     });
 
-    function updateResult() {
-      const a = document.getElementById("select-left").value;
-      const b = document.getElementById("select-right").value;
-      const display = document.getElementById("result");
+    function updateTotals() {
+      const aScores = [getVal("a1"), getVal("a2"), getVal("a3")];
+      const bScores = [getVal("b1"), getVal("b2"), getVal("b3")];
+      const aSum = aScores.reduce((acc, val) => acc + val, 0);
+      const bSum = bScores.reduce((acc, val) => acc + val, 0);
+      aTotalEl.textContent = aSum;
+      bTotalEl.textContent = bSum;
+    }
 
-      if (!a || !b) {
-        display.textContent = "";
-        display.style.color = "transparent";
-        return;
-      }
-      if (a in values && b in values[a]) {
-        display.textContent = values[a][b];
-        display.style.color = "#000";
-      } else {
-        display.textContent = "－";
-        display.style.color = "#000";
-      }
+    function getVal(id) {
+      const val = parseInt(document.getElementById(id).value);
+      return isNaN(val) ? 0 : val;
+    }
+
+    function endGame() {
+      const aSum = parseInt(aTotalEl.textContent);
+      const bSum = parseInt(bTotalEl.textContent);
+      const li = document.createElement("li");
+      li.textContent = `試合 ${historyList.children.length + 1}：A ${aSum} - B ${bSum}`;
+      historyList.appendChild(li);
+    }
+
+    function resetAll() {
+      inputIds.forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      aTotalEl.textContent = "0";
+      bTotalEl.textContent = "0";
+      historyList.innerHTML = ""; // 履歴も削除
     }
   </script>
 
